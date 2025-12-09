@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Upload, RefreshCw, Pencil, Type, Share2, Sparkles, Key, ExternalLink } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Upload, RefreshCw, Pencil, Type, Share2, Sparkles, ExternalLink, AlertCircle, Key, Copy, ArrowRight } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
 // Paper types available for the sketch
@@ -12,6 +12,7 @@ const NotebookSketchApp = () => {
   const [error, setError] = useState<string | null>(null);
   const [customText, setCustomText] = useState("FESTIVAL, LOVE, FUN");
   const [paperType, setPaperType] = useState<PaperType>("lined");
+  const [lastPrompt, setLastPrompt] = useState<string>("");
   
   // API Key Management
   const [apiKey, setApiKey] = useState<string>(() => {
@@ -59,15 +60,8 @@ const NotebookSketchApp = () => {
     setError(null);
     setGeneratedImage(null);
 
-    try {
-      const ai = new GoogleGenAI({ apiKey });
-      const model = "gemini-2.5-flash-image"; 
-      
-      // Extract base64 data (remove header)
-      const base64Data = selectedImage.split(',')[1];
-      const mimeType = selectedImage.split(';')[0].split(':')[1];
-
-      const prompt = `Convert this photo into a creative, hand-drawn colored pencil sketch on ${paperType} notebook paper. 
+    // Construct prompt
+    const prompt = `Convert this photo into a creative, hand-drawn colored pencil sketch on ${paperType} notebook paper. 
       
       Style details:
       - The background MUST look like a real sheet of ${paperType} paper.
@@ -77,6 +71,16 @@ const NotebookSketchApp = () => {
       - Inside the speech bubbles/doodles, include these specific words: "${customText}".
       - Add decorative stars, hearts, and squiggles in the empty spaces.
       - The overall vibe should be fun, energetic, and scrapbook-style.`;
+    
+    setLastPrompt(prompt);
+
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const model = "gemini-2.5-flash-image"; 
+      
+      // Extract base64 data (remove header)
+      const base64Data = selectedImage.split(',')[1];
+      const mimeType = selectedImage.split(';')[0].split(':')[1];
 
       const response = await ai.models.generateContent({
         model: model,
@@ -168,6 +172,10 @@ const NotebookSketchApp = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const copyPrompt = () => {
+    navigator.clipboard.writeText(lastPrompt);
   };
 
   return (
@@ -312,13 +320,15 @@ const NotebookSketchApp = () => {
               )}
             </button>
             {error && (
-              <p className="mt-3 text-xs text-red-500 text-center bg-red-50 p-2 rounded border border-red-100">{error}</p>
+               <div className="mt-3 text-xs text-red-500 text-center bg-red-50 p-2 rounded border border-red-100 flex items-center justify-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> Check result panel for details
+               </div>
             )}
           </div>
         </div>
 
-        {/* Right Panel: Result */}
-        <div className="w-full md:w-2/3 bg-slate-200 relative min-h-[400px] flex items-center justify-center p-4 md:p-8">
+        {/* Right Panel: Result or Error */}
+        <div className="w-full md:w-2/3 bg-slate-200 relative min-h-[400px] flex items-center justify-center p-4 md:p-8 overflow-hidden">
           {/* Background Texture Logic */}
           <div className="absolute inset-0 z-0 opacity-30 pointer-events-none" 
                style={{ 
@@ -331,7 +341,76 @@ const NotebookSketchApp = () => {
                }}>
           </div>
 
-          {generatedImage ? (
+          {error ? (
+             <div className="relative z-10 bg-white p-6 rounded-2xl shadow-xl border border-red-100 max-w-md w-full">
+                <div className="flex items-center gap-2 text-red-600 mb-4">
+                    <AlertCircle className="w-6 h-6" />
+                    <h3 className="text-lg font-bold">Generation Failed</h3>
+                </div>
+                
+                <p className="text-slate-600 text-sm mb-6 border-b border-slate-100 pb-4">
+                    {error} 
+                </p>
+
+                <div className="space-y-4">
+                    {/* Option 1: Fix API */}
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <h4 className="font-bold text-slate-800 text-xs mb-1 flex items-center gap-2">
+                            <Key className="w-3 h-3 text-indigo-500" /> Option 1: Check Billing
+                        </h4>
+                        <p className="text-[10px] text-slate-500 mb-2 leading-relaxed">
+                            Image generation often requires a billing account linked to your project in Google AI Studio.
+                        </p>
+                        <a 
+                            href="https://aistudio.google.com/app/apikey" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[10px] bg-white border border-slate-200 text-indigo-600 px-2 py-1 rounded shadow-sm font-medium inline-flex items-center gap-1 hover:bg-indigo-50 transition-colors"
+                        >
+                            Manage API Keys <ExternalLink className="w-3 h-3" />
+                        </a>
+                    </div>
+
+                    {/* Option 2: Manual Fallback */}
+                    <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                         <h4 className="font-bold text-indigo-900 text-xs mb-2 flex items-center gap-2">
+                            <Sparkles className="w-3 h-3 text-indigo-600" /> Option 2: Try in Gemini App
+                        </h4>
+                        
+                        <div className="mb-3">
+                            <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1 block">1. Copy Prompt</label>
+                            <div className="flex gap-2">
+                                <div className="flex-1 bg-white border border-indigo-200 text-[10px] p-2 rounded text-slate-600 h-8 overflow-hidden whitespace-nowrap">
+                                    {lastPrompt.substring(0, 45)}...
+                                </div>
+                                <button 
+                                    onClick={copyPrompt}
+                                    className="bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700 transition-colors shadow-sm"
+                                    title="Copy full prompt"
+                                >
+                                    <Copy className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                         <div>
+                            <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1 block">2. Open Gemini</label>
+                            <a 
+                                href="https://gemini.google.com" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="w-full bg-white border border-indigo-200 text-indigo-700 text-xs font-bold py-2 rounded flex items-center justify-center gap-2 hover:bg-indigo-100 transition-all shadow-sm"
+                            >
+                                Go to gemini.google.com <ArrowRight className="w-3 h-3" />
+                            </a>
+                            <p className="text-[10px] text-indigo-400 mt-2 text-center">
+                                Paste the prompt and upload your image there.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          ) : generatedImage ? (
             <div className="relative group w-full h-full flex items-center justify-center">
               <div className="relative bg-white p-2 md:p-4 shadow-2xl rotate-1 transform transition-transform duration-500 hover:rotate-0 rounded-sm max-h-full max-w-full">
                 {/* Tape effect */}
