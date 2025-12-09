@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, RefreshCw, Pencil, Type, Share2, Sparkles, ExternalLink, AlertCircle, Key, Copy, ArrowRight } from 'lucide-react';
+import { Upload, RefreshCw, Pencil, Type, Share2, Sparkles, ExternalLink, AlertCircle, Key, Copy, ArrowRight, Check } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
 // Paper types available for the sketch
@@ -71,6 +71,7 @@ const NotebookSketchApp = () => {
   const [customText, setCustomText] = useState("FESTIVAL, LOVE, FUN");
   const [paperType, setPaperType] = useState<PaperType>("lined");
   const [lastPrompt, setLastPrompt] = useState<string>("");
+  const [copied, setCopied] = useState(false);
   
   // API Key Management
   const [apiKey, setApiKey] = useState<string>(() => {
@@ -243,8 +244,46 @@ const NotebookSketchApp = () => {
     document.body.removeChild(link);
   };
 
-  const copyPrompt = () => {
-    navigator.clipboard.writeText(lastPrompt);
+  const copyPrompt = async () => {
+    if (!lastPrompt) return;
+    
+    // Attempt modern Clipboard API first
+    try {
+      await navigator.clipboard.writeText(lastPrompt);
+      setCopied(true);
+    } catch (err) {
+      // Fallback for iOS/Legacy Browsers
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = lastPrompt;
+        
+        // Ensure textarea is not visible but part of DOM to allow selection
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        textArea.setAttribute('readonly', ''); // Prevent keyboard popup on mobile
+        
+        document.body.appendChild(textArea);
+        
+        textArea.focus();
+        textArea.select();
+        
+        // Explicit selection range for iOS compatibility
+        textArea.setSelectionRange(0, 99999);
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+            setCopied(true);
+        }
+      } catch (fallbackErr) {
+        console.error('Copy fallback failed', fallbackErr);
+      }
+    }
+    
+    // Reset status after delay
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -470,10 +509,14 @@ const NotebookSketchApp = () => {
                                   </div>
                                   <button 
                                       onClick={copyPrompt}
-                                      className="bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700 transition-colors shadow-sm"
-                                      title="Copy full prompt"
+                                      className={`p-2 rounded transition-all shadow-sm flex items-center justify-center min-w-[36px] ${
+                                          copied 
+                                          ? 'bg-green-500 text-white transform scale-105' 
+                                          : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                      }`}
+                                      title={copied ? "Copied!" : "Copy full prompt"}
                                   >
-                                      <Copy className="w-4 h-4" />
+                                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                                   </button>
                               </div>
                           </div>
