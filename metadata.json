@@ -1,0 +1,5 @@
+{
+  "name": "NotebookSketch",
+  "description": "Turn your photos into creative, hand-drawn notebook sketches with customizable doodles and paper styles using Gemini 2.5.",
+  "requestFramePermissions": []
+}
