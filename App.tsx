@@ -122,10 +122,21 @@ const NotebookSketchApp = () => {
 
     } catch (err: any) {
       console.error("Generation failed:", err);
-      if (err.toString().includes("401") || err.toString().includes("403") || err.toString().includes("API key")) {
+      
+      const errorString = err.toString();
+      const errorMessage = err.message || "";
+
+      // Handle specific Auth/Key errors
+      if (errorString.includes("401") || errorString.includes("403") || errorString.includes("API key") || errorMessage.includes("API key")) {
         setError("Authentication failed. Please check your API key.");
-      } else {
-        setError(err.message || "Failed to generate sketch. Please try a different photo.");
+      } 
+      // Handle known logic errors (Safety, No Image)
+      else if (errorMessage.includes("safety filter") || errorMessage.includes("text instead of an image") || errorMessage.includes("No image was generated")) {
+         setError(errorMessage);
+      }
+      // Catch-all for Quota (429), Billing, or messy JSON errors
+      else {
+        setError("Generation failed. This is often because your API key is not linked to a billing account (required for image generation). Please check Option 1 below or use Option 2.");
       }
     } finally {
       setIsGenerating(false);
