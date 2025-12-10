@@ -70,7 +70,6 @@ const NotebookSketchApp = () => {
   const [error, setError] = useState<string | null>(null);
   const [customText, setCustomText] = useState("FESTIVAL, LOVE, FUN");
   const [paperType, setPaperType] = useState<PaperType>("lined");
-  const [lastPrompt, setLastPrompt] = useState<string>("");
   const [copied, setCopied] = useState(false);
   
   // API Key Management
@@ -107,6 +106,19 @@ const NotebookSketchApp = () => {
     fileInputRef.current?.click();
   };
 
+  const getPrompt = () => {
+    return `Convert this photo into a creative, hand-drawn colored pencil sketch on ${paperType} notebook paper. 
+      
+      Style details:
+      - The background MUST look like a real sheet of ${paperType} paper.
+      - The subjects should be drawn in a loose, artistic colored pencil or ballpoint pen style.
+      - Add a slight glowing yellow or neon outline around the main subjects.
+      - Add playful, hand-drawn red or blue ink speech bubbles and doodles around the subjects.
+      - Inside the speech bubbles/doodles, include these specific words: "${customText}".
+      - Add decorative stars, hearts, and squiggles in the empty spaces.
+      - The overall vibe should be fun, energetic, and scrapbook-style.`;
+  };
+
   const handleGenerate = async () => {
     if (!selectedImage) return;
 
@@ -119,19 +131,7 @@ const NotebookSketchApp = () => {
     setError(null);
     setGeneratedImage(null);
 
-    // Construct prompt
-    const prompt = `Convert this photo into a creative, hand-drawn colored pencil sketch on ${paperType} notebook paper. 
-      
-      Style details:
-      - The background MUST look like a real sheet of ${paperType} paper.
-      - The subjects should be drawn in a loose, artistic colored pencil or ballpoint pen style.
-      - Add a slight glowing yellow or neon outline around the main subjects.
-      - Add playful, hand-drawn red or blue ink speech bubbles and doodles around the subjects.
-      - Inside the speech bubbles/doodles, include these specific words: "${customText}".
-      - Add decorative stars, hearts, and squiggles in the empty spaces.
-      - The overall vibe should be fun, energetic, and scrapbook-style.`;
-    
-    setLastPrompt(prompt);
+    const prompt = getPrompt();
 
     try {
       const ai = new GoogleGenAI({ apiKey });
@@ -245,17 +245,17 @@ const NotebookSketchApp = () => {
   };
 
   const copyPrompt = async () => {
-    if (!lastPrompt) return;
+    const promptText = getPrompt();
     
     // Attempt modern Clipboard API first
     try {
-      await navigator.clipboard.writeText(lastPrompt);
+      await navigator.clipboard.writeText(promptText);
       setCopied(true);
     } catch (err) {
       // Fallback for iOS/Legacy Browsers
       try {
         const textArea = document.createElement("textarea");
-        textArea.value = lastPrompt;
+        textArea.value = promptText;
         
         // Ensure textarea is not visible but part of DOM to allow selection
         textArea.style.position = "fixed";
@@ -392,59 +392,99 @@ const NotebookSketchApp = () => {
               </div>
             </div>
 
-            {/* Action Button & API Key */}
-            <div className="mt-auto pt-4 border-t border-slate-100">
+            {/* Step 3: Action Options (Main Change) */}
+            <div className="mt-auto pt-2 flex flex-col gap-5">
               
-              {/* API Key Input */}
-              <div className="mb-4">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block flex items-center justify-between">
-                  API Key
-                </label>
-                <div className="relative">
+              {/* Option 1: Free / External */}
+              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wide mb-2 flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Option 1: Free (Gemini App)
+                </h3>
+                
+                <div className="flex gap-2 mb-2">
+                   <button 
+                      onClick={copyPrompt}
+                      className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm ${
+                        copied 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50'
+                      }`}
+                   >
+                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied ? "Copied!" : "Get Prompt"}
+                   </button>
+                   
+                   <a 
+                      href="https://gemini.google.com" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex-1 py-2 px-2 bg-indigo-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-indigo-700 transition-colors shadow-sm"
+                   >
+                      Open Gemini <ExternalLink className="w-3.5 h-3.5" />
+                   </a>
+                </div>
+                <p className="text-[10px] text-indigo-400 leading-tight">
+                  Copy the prompt and paste it into the Google Gemini app.
+                </p>
+              </div>
+
+              {/* Divider */}
+              <div className="relative flex items-center py-1">
+                  <div className="flex-grow border-t border-slate-200"></div>
+                  <span className="flex-shrink-0 mx-3 text-slate-300 text-[10px] font-bold uppercase tracking-wider">OR</span>
+                  <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
+              {/* Option 2: Paid / Internal */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 flex items-center gap-2">
+                  <Key className="w-3.5 h-3.5" /> Option 2: Instant Sketch (Pro)
+                </h3>
+                
+                <div className="relative mb-3">
                   <input 
                     type="password" 
                     value={apiKey}
                     onChange={handleApiKeyChange}
-                    placeholder="Paste your API key here..."
-                    className="w-full px-4 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                    placeholder="Enter Paid API Key..."
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
                   />
-                </div>
-                <div className="text-right mt-1">
                   <a 
                     href="https://aistudio.google.com/app/apikey" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-indigo-500 hover:text-indigo-700 font-bold"
                   >
-                    Get API Key <ExternalLink className="w-3 h-3" />
+                    GET KEY
                   </a>
                 </div>
-              </div>
 
-              <button
-                onClick={handleGenerate}
-                disabled={!selectedImage || isGenerating}
-                className={`w-full py-3.5 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition-all transform active:scale-95
-                  ${!selectedImage 
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
-                    : isGenerating 
-                      ? 'bg-indigo-500 text-white cursor-wait'
-                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white hover:shadow-xl hover:-translate-y-0.5'}`}
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                    Sketching...
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="w-5 h-5" />
-                    Sketch It!
-                  </>
-                )}
-              </button>
+                <button
+                  onClick={handleGenerate}
+                  disabled={!selectedImage || isGenerating}
+                  className={`w-full py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 transition-all transform active:scale-95
+                    ${!selectedImage 
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                      : isGenerating 
+                        ? 'bg-slate-800 text-white cursor-wait'
+                        : 'bg-slate-800 text-white hover:bg-slate-900 hover:shadow-lg'}`}
+                >
+                  {isGenerating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Sketching...
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="w-4 h-4" />
+                      Sketch It!
+                    </>
+                  )}
+                </button>
+              </div>
+              
               {error && (
-                <div className="mt-3 text-xs text-red-500 text-center bg-red-50 p-2 rounded border border-red-100 flex items-center justify-center gap-1">
+                <div className="mt-2 text-xs text-red-500 text-center bg-red-50 p-2 rounded border border-red-100 flex items-center justify-center gap-1">
                     <AlertCircle className="w-3 h-3" /> Check result panel for details
                 </div>
               )}
@@ -452,7 +492,7 @@ const NotebookSketchApp = () => {
           </div>
 
           {/* Right Panel: Result or Error */}
-          <div className="w-full md:w-2/3 bg-slate-200 relative min-h-[400px] flex items-center justify-center p-4 md:p-8 overflow-hidden">
+          <div className="w-full md:w-2/3 bg-slate-200 relative min-h-[500px] flex items-center justify-center p-4 md:p-8 overflow-hidden">
             {/* Background Texture Logic */}
             <div className="absolute inset-0 z-0 opacity-30 pointer-events-none" 
                 style={{ 
@@ -477,64 +517,14 @@ const NotebookSketchApp = () => {
                   </p>
 
                   <div className="space-y-4">
-                      {/* Option 1: Fix API */}
                       <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                           <h4 className="font-bold text-slate-800 text-xs mb-1 flex items-center gap-2">
-                              <Key className="w-3 h-3 text-indigo-500" /> Option 1: Check Billing
+                              <Key className="w-3 h-3 text-indigo-500" /> Troubleshooting
                           </h4>
                           <p className="text-[10px] text-slate-500 mb-2 leading-relaxed">
-                              Image generation often requires a billing account linked to your project in Google AI Studio.
+                              If you are using the Instant Sketch option, ensure your API key is from a project with billing enabled in Google AI Studio. 
+                              Otherwise, try the <strong>Free Option (Gemini App)</strong> on the left panel!
                           </p>
-                          <a 
-                              href="https://aistudio.google.com/app/apikey" 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-[10px] bg-white border border-slate-200 text-indigo-600 px-2 py-1 rounded shadow-sm font-medium inline-flex items-center gap-1 hover:bg-indigo-50 transition-colors"
-                          >
-                              Manage API Keys <ExternalLink className="w-3 h-3" />
-                          </a>
-                      </div>
-
-                      {/* Option 2: Manual Fallback */}
-                      <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-                          <h4 className="font-bold text-indigo-900 text-xs mb-2 flex items-center gap-2">
-                              <Sparkles className="w-3 h-3 text-indigo-600" /> Option 2: Try in Gemini App
-                          </h4>
-                          
-                          <div className="mb-3">
-                              <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1 block">1. Copy Prompt</label>
-                              <div className="flex gap-2">
-                                  <div className="flex-1 bg-white border border-indigo-200 text-[10px] p-2 rounded text-slate-600 h-8 overflow-hidden whitespace-nowrap">
-                                      {lastPrompt.substring(0, 45)}...
-                                  </div>
-                                  <button 
-                                      onClick={copyPrompt}
-                                      className={`p-2 rounded transition-all shadow-sm flex items-center justify-center min-w-[36px] ${
-                                          copied 
-                                          ? 'bg-green-500 text-white transform scale-105' 
-                                          : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                                      }`}
-                                      title={copied ? "Copied!" : "Copy full prompt"}
-                                  >
-                                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                                  </button>
-                              </div>
-                          </div>
-
-                          <div>
-                              <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1 block">2. Open Gemini</label>
-                              <a 
-                                  href="https://gemini.google.com" 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="w-full bg-white border border-indigo-200 text-indigo-700 text-xs font-bold py-2 rounded flex items-center justify-center gap-2 hover:bg-indigo-100 transition-all shadow-sm"
-                              >
-                                  Go to gemini.google.com <ArrowRight className="w-3 h-3" />
-                              </a>
-                              <p className="text-[10px] text-indigo-400 mt-2 text-center">
-                                  Paste the prompt and upload your image there.
-                              </p>
-                          </div>
                       </div>
                   </div>
               </div>
@@ -584,7 +574,7 @@ const NotebookSketchApp = () => {
                 </h3>
                 <p className="text-slate-500 text-sm">
                   {selectedImage 
-                    ? "Hit the 'Sketch It!' button on the left to start the magic." 
+                    ? "Choose an option on the left to start! Use the Free Option to generate in Gemini, or enter a key for Instant Sketch." 
                     : "Upload a photo to see it transformed into a notebook masterpiece."}
                 </p>
               </div>
